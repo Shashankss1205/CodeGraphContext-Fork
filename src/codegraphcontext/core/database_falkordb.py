@@ -3,6 +3,13 @@
 This module provides a thread-safe singleton manager for the FalkorDB Lite database connection.
 FalkorDB Lite is an embedded graph database that requires no external server setup.
 """
+
+class FalkorDBUnavailableError(RuntimeError):
+    """
+    Raised when FalkorDB Lite is installed but cannot actually run in this
+    environment (e.g. falkordb.so not found in a PyInstaller bundle,
+    or GRAPH.QUERY not available). Callers should fall back to KùzuDB.
+    """
 import os
 import sys
 import subprocess
@@ -215,7 +222,18 @@ class FalkorDBManager:
             # Check if process died
             if self._process.poll() is not None:
                 out, err = self._process.communicate()
-                raise RuntimeError(f"FalkorDB worker failed to start (Exit Code {self._process.returncode}):\nSTDOUT: {out.decode()}\nSTDERR: {err.decode()}")
+                returncode = self._process.returncode
+                # Exit code 2 means falkordb.so not found or GRAPH.QUERY broken
+                # — signal the caller to fall back to KùzuDB
+                if returncode == 2:
+                    raise FalkorDBUnavailableError(
+                        f"FalkorDB Lite worker could not load falkordb.so or GRAPH.QUERY "
+                        f"is unavailable in this environment.\nSTDERR: {err.decode().strip()}"
+                    )
+                raise RuntimeError(
+                    f"FalkorDB worker failed to start (Exit Code {returncode}):"
+                    f"\nSTDOUT: {out.decode()}\nSTDERR: {err.decode()}"
+                )
             
             time.sleep(0.5)
             

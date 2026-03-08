@@ -301,18 +301,31 @@ def _load_credentials():
         console.print("[yellow]No configuration file found. Using defaults.[/yellow]")
     
     
-    # Show which database is actually being used
-    # Check for runtime override first (from -db/--database flag)
+    # Show which database is actually being used.
+    # When DATABASE_TYPE is explicitly set, trust it.  When it's left to auto-
+    # detect, call get_database_manager() so the banner can never lie: e.g. if
+    # falkordblite is installed but its native .so is missing (frozen bundle),
+    # the factory falls back to KùzuDB and we display that correctly.
     runtime_db = os.environ.get("CGC_RUNTIME_DB_TYPE")
-    if runtime_db:
-        default_db = runtime_db.lower()
+    explicit_db = (
+        runtime_db
+        or os.environ.get("DEFAULT_DATABASE")
+        or os.environ.get("DATABASE_TYPE")
+    )
+
+    if explicit_db:
+        default_db = explicit_db.lower()
     else:
-        from codegraphcontext.core import _is_falkordb_available
-        if _is_falkordb_available():
-            default_db = (os.environ.get("DEFAULT_DATABASE") or os.environ.get("DATABASE_TYPE") or "falkordb").lower()
-        else:
-            default_db = (os.environ.get("DEFAULT_DATABASE") or os.environ.get("DATABASE_TYPE") or "kuzudb").lower()
-    
+        # No explicit choice — ask the factory which backend it will use
+        try:
+            from codegraphcontext.core import get_database_manager
+            _mgr = get_database_manager()
+            default_db = _mgr.get_backend_type()   # e.g. 'falkordb' / 'kuzudb'
+        except Exception:
+            # Factory failed entirely — still show a best-guess
+            from codegraphcontext.core import _is_falkordb_available
+            default_db = "falkordb" if _is_falkordb_available() else "kuzudb"
+
     if default_db == "neo4j":
         has_neo4j_creds = all([
             os.environ.get("NEO4J_URI"),

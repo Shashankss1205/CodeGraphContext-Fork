@@ -9,6 +9,12 @@ Use DATABASE_TYPE environment variable to switch:
 - DATABASE_TYPE=falkordb-remote - Uses a remote/hosted FalkorDB server over TCP
 - DATABASE_TYPE=neo4j - Uses Neo4j server
 - If not set, auto-detects based on what's available
+
+ Priority (no DATABASE_TYPE set):
+  1. FalkorDB Lite  (Unix + Python 3.12+ + falkordblite installed)
+  2. KùzuDB         (cross-platform fallback)
+  3. Remote FalkorDB (if FALKORDB_HOST is set)
+  4. Neo4j           (if credentials are configured)
 """
 import os
 import platform
@@ -108,9 +114,17 @@ def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager', 'Falko
 
     # 4. Implicit Default -> FalkorDB Lite (Unix Zero Config)
     if _is_falkordb_available():
-        from .database_falkordb import FalkorDBManager
-        info_logger("Using FalkorDB Lite (default)")
-        return FalkorDBManager()
+        from .database_falkordb import FalkorDBManager, FalkorDBUnavailableError
+        try:
+            mgr = FalkorDBManager()
+            info_logger("Using FalkorDB Lite (default)")
+            return mgr
+        except FalkorDBUnavailableError as falkor_err:
+            info_logger(
+                f"FalkorDB Lite not functional in this environment ({falkor_err}). "
+                "Falling back to KùzuDB."
+            )
+            # fall through to KùzuDB below
 
     # 5. Implicit Default -> KùzuDB (Best Zero Config)
     if _is_kuzudb_available():
