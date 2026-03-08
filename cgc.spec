@@ -199,8 +199,8 @@ if not is_win:
     add_binary('falkordblite.scripts', ext)
 
 # stdlibs: dynamically imports py3.py, py312.py, etc. via importlib
-stdlibs_dir = site_packages / 'stdlibs'
-if stdlibs_dir.exists():
+stdlibs_dir = find_pkg_dir('stdlibs')
+if stdlibs_dir:
     for f in stdlibs_dir.glob('*.py'):
         datas.append((str(f), 'stdlibs'))
 
@@ -212,13 +212,10 @@ mcp_json = Path('src/codegraphcontext/mcp.json')
 if mcp_json.exists():
     datas.append((str(mcp_json), 'codegraphcontext'))
 
-# tree-sitter-language-pack metadata
-ts_pack_dir = site_packages / 'tree_sitter_language_pack'
-if ts_pack_dir.exists():
-    for f in ts_pack_dir.glob('*.py'):
-        datas.append((str(f), 'tree_sitter_language_pack'))
-    for f in ts_pack_dir.glob('*.pyi'):
-        datas.append((str(f), 'tree_sitter_language_pack'))
+# tree-sitter-language-pack: includes metadata needed at runtime
+tslp_dir = find_pkg_dir('tree_sitter_language_pack')
+if tslp_dir:
+    datas += collect_data_files('tree_sitter_language_pack', includes=['**/*'])
 
 # ── 3. Final Adjustments ────────────────────────────────────────────────────
 
