@@ -1,14 +1,14 @@
 html,
 body {
-  width: 100vw;
-  max-width: 100vw;
-  overflow-x: hidden !important;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
 }
 #root {
-  width: 100vw;
-  max-width: 100vw;
-  overflow-x: hidden !important;
+  width: 100%;
 }
+
 /* Reserve stable space for scrollbar and use a thin, subtle scrollbar */
 html {
   scrollbar-gutter: stable;
@@ -16,7 +16,7 @@ html {
 
 /* Thin scrollbar for modern browsers */
 body::-webkit-scrollbar {
-  width: 38px;
+  width: 8px;
 }
 body::-webkit-scrollbar-track {
   background: transparent;
